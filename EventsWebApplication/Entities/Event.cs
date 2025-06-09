@@ -8,7 +8,7 @@ public class Event
     public DateTime StartAt { get; set; }
     public DateTime EndAt { get; set; }
     public string Location { get; set; }
-    public string Category { get; set; }
+    public string? Category { get; set; }
     public int MaxParticipantsCount { get; set; }
-    public string ImageUrl { get; set; }
+    public string? ImageUrl { get; set; }
 }
