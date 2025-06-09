@@ -17,9 +17,13 @@ public class EventsController : ControllerBase
     }
 
     [HttpGet("/events")]
-    public async Task<IActionResult> GetEvents()
+    public async Task<IActionResult> GetEvents(string? title, string? location, string? category, DateOnly? date)
     {
         var events = await dbContext.Events
+            .Where(@event => string.IsNullOrEmpty(title) || EF.Functions.ILike(@event.Title, $"%{title}%"))
+            .Where(@event => string.IsNullOrEmpty(location) || EF.Functions.ILike(@event.Location, $"%{location}%"))
+            .Where(@event => string.IsNullOrEmpty(category) || EF.Functions.ILike(@event.Category, $"%{category}%"))
+            .Where(@event => date == null || DateOnly.FromDateTime(@event.StartAt) <= date && DateOnly.FromDateTime(@event.EndAt) >= date)
             .ToListAsync();
         
         var eventDtos = events.Select(@event => new ShortEventDto()
