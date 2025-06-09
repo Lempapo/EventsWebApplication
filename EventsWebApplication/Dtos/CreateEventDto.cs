@@ -1,4 +1,6 @@
-﻿namespace EventsWebApplication.Dtos;
+﻿using FluentValidation;
+
+namespace EventsWebApplication.Dtos;
 
 public class CreateEventDto
 {
@@ -10,4 +12,18 @@ public class CreateEventDto
     public string? Category { get; init; }
     public int MaxParticipantsCount { get; init; }
     public string? ImageUrl { get; init; }
+}
+
+public class CreateEventDtoValidator : AbstractValidator<CreateEventDto>
+{
+    public CreateEventDtoValidator()
+    {
+        RuleFor(createEventDto => createEventDto.Title).NotEmpty().MaximumLength(250);
+        RuleFor(createEventDto => createEventDto.Description).NotEmpty().MaximumLength(10000);
+        RuleFor(createEventDto => createEventDto.StartAt).LessThan(createEventDto => createEventDto.EndAt);
+        RuleFor(createEventDto => createEventDto.Location).NotEmpty().MaximumLength(250);
+        RuleFor(createEventDto => createEventDto.Category).MaximumLength(100);
+        RuleFor(createEventDto => createEventDto.MaxParticipantsCount).GreaterThan(0).LessThan(10000);
+        RuleFor(createEventDto => createEventDto.ImageUrl).MaximumLength(2048);
+    }
 }

@@ -10,12 +10,16 @@ namespace EventsWebApplication.Controllers;
 public class EventsController : ControllerBase
 {
     private readonly EventsDbContext dbContext;
+    private readonly UpdateEventDtoValidator updateEventDtoValidator;
+    private readonly CreateEventDtoValidator createEventDtoValidator;
     
-    public EventsController(EventsDbContext dbContext)
+    public EventsController(EventsDbContext dbContext, CreateEventDtoValidator createEventDtoValidator, UpdateEventDtoValidator updateEventDtoValidator)
     {
         this.dbContext = dbContext;
+        this.createEventDtoValidator = createEventDtoValidator;
+        this.updateEventDtoValidator = updateEventDtoValidator;
     }
-
+    
     [HttpGet("/events")]
     public async Task<IActionResult> GetEvents(string? title, string? location, string? category, DateOnly? date)
     {
@@ -71,6 +75,13 @@ public class EventsController : ControllerBase
     [HttpPost("/events")]
     public async Task<IActionResult> CreateEvent(CreateEventDto createEventDto)
     {
+        var createEventDtoValidationResult = createEventDtoValidator.Validate(createEventDto);
+
+        if (!createEventDtoValidationResult.IsValid)
+        {
+            return BadRequest(createEventDtoValidationResult.Errors);
+        }
+        
         var newEvent = new Event()
         {
             Id = Guid.NewGuid(),
@@ -106,6 +117,13 @@ public class EventsController : ControllerBase
     [HttpPut("/events/{id:guid}")]
     public async Task<IActionResult> EditEvent(Guid id, UpdateEventDto updateEventDto)
     {
+        var updateEventValidatorResult = updateEventDtoValidator.Validate(updateEventDto);
+        
+        if (!updateEventValidatorResult.IsValid)
+        {
+            return BadRequest(updateEventValidatorResult.Errors);
+        }
+        
         var eventToUpdate = await dbContext.Events.SingleOrDefaultAsync(@event => @event.Id == id);
         
         if (eventToUpdate is null)
