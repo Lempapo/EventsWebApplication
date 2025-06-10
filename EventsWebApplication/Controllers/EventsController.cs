@@ -1,4 +1,5 @@
-﻿using EventsWebApplication.Dtos;
+﻿using System.ComponentModel.DataAnnotations;
+using EventsWebApplication.Dtos;
 using EventsWebApplication.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -20,16 +21,29 @@ public class EventsController : ControllerBase
     }
     
     [HttpGet("/events")]
-    public async Task<IActionResult> GetEvents(string? title, string? location, string? category, DateOnly? date)
+    public async Task<IActionResult> GetEvents(
+        string? title, 
+        string? location, 
+        string? category, 
+        DateOnly? date,
+        [Range(1, int.MaxValue)] int pageNumber, 
+        [Range(1, 50)] int pageSize)
     {
-        var events = await dbContext.Events
+        var filteredEventsQuery = dbContext.Events
             .Where(@event => string.IsNullOrEmpty(title) || EF.Functions.ILike(@event.Title, $"%{title}%"))
             .Where(@event => string.IsNullOrEmpty(location) || EF.Functions.ILike(@event.Location, $"%{location}%"))
             .Where(@event => string.IsNullOrEmpty(category) || EF.Functions.ILike(@event.Category, $"%{category}%"))
-            .Where(@event => date == null || DateOnly.FromDateTime(@event.StartAt) <= date && DateOnly.FromDateTime(@event.EndAt) >= date)
-            .ToListAsync();
+            .Where(@event => date == null || DateOnly.FromDateTime(@event.StartAt) <= date && DateOnly.FromDateTime(@event.EndAt) >= date);
         
-        var eventDtos = events.Select(@event => new ShortEventDto()
+        var eventsCount = await filteredEventsQuery.CountAsync();
+        
+        var events = await filteredEventsQuery
+            .OrderBy(@event => @event.StartAt)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        var eventDtos = events.Select(@event => new ShortEventDto
         {
             Id = @event.Id,
             Title = @event.Title,
@@ -40,8 +54,16 @@ public class EventsController : ControllerBase
             MaxParticipantsCount = @event.MaxParticipantsCount,
             ImageFileId = @event.ImageFileId
         });
+
+        var pageDto = new PageDto<ShortEventDto>
+        {
+            Items = eventDtos.ToList(),
+            TotalItemsCount = eventsCount,
+            PageSize = pageSize,
+            PagesCount = (int)Math.Ceiling((double)eventsCount / pageSize)
+        };
         
-        return Ok(eventDtos);
+        return Ok(pageDto);
     }
 
     [HttpGet("/events/{id:guid}")]
