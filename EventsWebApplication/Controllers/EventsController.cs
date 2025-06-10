@@ -26,8 +26,8 @@ public class EventsController : ControllerBase
         string? location, 
         string? category, 
         DateOnly? date,
-        [Range(1, int.MaxValue)] int pageNumber, 
-        [Range(1, 50)] int pageSize)
+        [Required][Range(1, int.MaxValue)] int pageNumber, 
+        [Required][Range(1, 50)] int pageSize)
     {
         var filteredEventsQuery = dbContext.Events
             .Where(@event => string.IsNullOrEmpty(title) || EF.Functions.ILike(@event.Title, $"%{title}%"))
