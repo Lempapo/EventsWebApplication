@@ -6,7 +6,6 @@ using Microsoft.EntityFrameworkCore;
 namespace EventsWebApplication.Controllers;
 
 [ApiController]
-
 public class EventsController : ControllerBase
 {
     private readonly EventsDbContext dbContext;
