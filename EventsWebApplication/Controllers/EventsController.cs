@@ -38,7 +38,7 @@ public class EventsController : ControllerBase
             Location = @event.Location,
             Category = @event.Category,
             MaxParticipantsCount = @event.MaxParticipantsCount,
-            ImageUrl = @event.ImageUrl
+            ImageFileId = @event.ImageFileId
         });
         
         return Ok(eventDtos);
@@ -65,7 +65,7 @@ public class EventsController : ControllerBase
             Location = @event.Location,
             Category = @event.Category,
             MaxParticipantsCount = @event.MaxParticipantsCount,
-            ImageUrl = @event.ImageUrl
+            ImageFileId = @event.ImageFileId
         };
         
         return Ok(fullEventDto);
@@ -80,7 +80,17 @@ public class EventsController : ControllerBase
         {
             return BadRequest(createEventDtoValidationResult.Errors);
         }
+
+        if (createEventDto.ImageFileId is not null)
+        {
+            var filePath = Path.Combine(Directory.GetCurrentDirectory(), "uploads", createEventDto.ImageFileId);
         
+            if (!System.IO.File.Exists(filePath))
+            {
+                return NotFound();
+            }
+        }
+
         var newEvent = new Event()
         {
             Id = Guid.NewGuid(),
@@ -91,7 +101,7 @@ public class EventsController : ControllerBase
             Location = createEventDto.Location,
             Category = createEventDto.Category,
             MaxParticipantsCount = createEventDto.MaxParticipantsCount,
-            ImageUrl = createEventDto.ImageUrl
+            ImageFileId = createEventDto.ImageFileId
         };
         
         dbContext.Add(newEvent);
@@ -107,7 +117,7 @@ public class EventsController : ControllerBase
             Location = newEvent.Location,
             Category = newEvent.Category,
             MaxParticipantsCount = newEvent.MaxParticipantsCount,
-            ImageUrl = newEvent.ImageUrl
+            ImageFileId = newEvent.ImageFileId
         };
         
         return Ok(newFullEventDto);
@@ -130,6 +140,16 @@ public class EventsController : ControllerBase
             return NotFound();
         }
         
+        if (updateEventDto.ImageFileId is not null && eventToUpdate.ImageFileId != updateEventDto.ImageFileId)
+        {
+            var filePath = Path.Combine(Directory.GetCurrentDirectory(), "uploads", updateEventDto.ImageFileId);
+        
+            if (!System.IO.File.Exists(filePath))
+            {
+                return NotFound();
+            }
+        }
+        
         eventToUpdate.Title = updateEventDto.Title;
         eventToUpdate.Description = updateEventDto.Description;
         eventToUpdate.StartAt = updateEventDto.StartAt;
@@ -137,7 +157,7 @@ public class EventsController : ControllerBase
         eventToUpdate.Location = updateEventDto.Location;
         eventToUpdate.Category = updateEventDto.Category;
         eventToUpdate.MaxParticipantsCount = updateEventDto.MaxParticipantsCount;
-        eventToUpdate.ImageUrl = updateEventDto.ImageUrl;
+        eventToUpdate.ImageFileId = updateEventDto.ImageFileId;
         
         dbContext.Update(eventToUpdate);
         await dbContext.SaveChangesAsync();

@@ -11,7 +11,7 @@ public class UpdateEventDto
     public string Location { get; init; }
     public string? Category { get; init; }
     public int MaxParticipantsCount { get; init; }
-    public string? ImageUrl { get; init; }
+    public string? ImageFileId { get; init; }
 }
 
 public class UpdateEventDtoValidator : AbstractValidator<UpdateEventDto>
@@ -24,6 +24,6 @@ public class UpdateEventDtoValidator : AbstractValidator<UpdateEventDto>
         RuleFor(updateEventDto => updateEventDto.Location).NotEmpty().MaximumLength(250);
         RuleFor(updateEventDto => updateEventDto.Category).MaximumLength(100);
         RuleFor(updateEventDto => updateEventDto.MaxParticipantsCount).GreaterThan(0).LessThan(10000);
-        RuleFor(updateEventDto => updateEventDto.ImageUrl).MaximumLength(2048);
+        RuleFor(updateEventDto => updateEventDto.ImageFileId).MaximumLength(41);
     }
 }

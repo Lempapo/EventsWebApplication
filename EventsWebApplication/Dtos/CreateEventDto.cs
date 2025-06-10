@@ -11,7 +11,7 @@ public class CreateEventDto
     public string Location { get; init; }
     public string? Category { get; init; }
     public int MaxParticipantsCount { get; init; }
-    public string? ImageUrl { get; init; }
+    public string? ImageFileId { get; init; }
 }
 
 public class CreateEventDtoValidator : AbstractValidator<CreateEventDto>
@@ -24,6 +24,6 @@ public class CreateEventDtoValidator : AbstractValidator<CreateEventDto>
         RuleFor(createEventDto => createEventDto.Location).NotEmpty().MaximumLength(250);
         RuleFor(createEventDto => createEventDto.Category).MaximumLength(100);
         RuleFor(createEventDto => createEventDto.MaxParticipantsCount).GreaterThan(0).LessThan(10000);
-        RuleFor(createEventDto => createEventDto.ImageUrl).MaximumLength(2048);
+        RuleFor(createEventDto => createEventDto.ImageFileId).MaximumLength(41);
     }
 }

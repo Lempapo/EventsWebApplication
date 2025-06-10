@@ -9,5 +9,5 @@ public class ShortEventDto
     public string Location { get; init; }
     public string? Category { get; init; }
     public int MaxParticipantsCount { get; init; }
-    public string? ImageUrl { get; init; }
+    public string? ImageFileId { get; init; }
 }

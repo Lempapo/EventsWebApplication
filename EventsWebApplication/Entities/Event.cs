@@ -10,5 +10,5 @@ public class Event
     public string Location { get; set; }
     public string? Category { get; set; }
     public int MaxParticipantsCount { get; set; }
-    public string? ImageUrl { get; set; }
+    public string? ImageFileId { get; set; }
 }
