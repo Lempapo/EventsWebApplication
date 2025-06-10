@@ -12,15 +12,23 @@ public class FilesController : ControllerBase
         {
             return BadRequest();
         }
+        
+        var uploadsDirectory = Path.Combine(Directory.GetCurrentDirectory(), "uploads");
 
-        var filePath = Path.GetTempFileName();
-        var newFilePath = Path.ChangeExtension(filePath, Path.GetExtension(file.FileName));
+        if (!Directory.Exists(uploadsDirectory))
+        {
+            Directory.CreateDirectory(uploadsDirectory);
+        }
+        
+        var fileExtension = Path.GetExtension(file.FileName);
+        var fileName = $"{Guid.NewGuid()}{fileExtension}";
+        var filePath = Path.Combine(uploadsDirectory, fileName);
 
-        await using (var stream = System.IO.File.Create(newFilePath))
+        await using (var stream = System.IO.File.Create(filePath))
         {
             await file.CopyToAsync(stream);
         }
         
-        return Ok(file);  
+        return Ok(fileName);  
     }
 }
