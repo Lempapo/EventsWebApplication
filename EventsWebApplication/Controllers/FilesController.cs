@@ -31,4 +31,20 @@ public class FilesController : ControllerBase
         
         return Ok(fileName);  
     }
+
+    [HttpGet("/files/{fileId}")]
+    public async Task<IActionResult> GetFile(string fileId)
+    {
+        var filePath = Path.Combine(Directory.GetCurrentDirectory(), "uploads", fileId);
+        
+        if (!System.IO.File.Exists(filePath))
+        {
+            return NotFound();
+        }
+        
+        var fileContent = await System.IO.File.ReadAllBytesAsync(filePath);
+        var contentType = "application/octet-stream";
+        
+        return File(fileContent, contentType, fileId);
+    }
 }
