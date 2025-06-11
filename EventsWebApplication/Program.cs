@@ -1,6 +1,6 @@
 using EventsWebApplication;
 using EventsWebApplication.Dtos;
-using Microsoft.AspNetCore.Identity;
+using EventsWebApplication.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 
@@ -42,12 +42,12 @@ builder.Services.AddDbContext<EventsDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Default"));
 });
 
-builder.Services.AddAutoMapper(typeof(Program).Assembly);
+builder.Services.AddAutoMapper(typeof(Program).Assembly);   
 
 builder.Services.AddAuthorization();
 
 builder.Services
-    .AddIdentityApiEndpoints<IdentityUser>()
+    .AddIdentityApiEndpoints<ApplicationUser>()
     .AddEntityFrameworkStores<EventsDbContext>();
 
 var app = builder.Build();
@@ -63,7 +63,7 @@ app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapIdentityApi<IdentityUser>();
+app.MapIdentityApi<ApplicationUser>();
 
 app.MapControllers();
 
