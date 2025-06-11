@@ -1,5 +1,6 @@
 using EventsWebApplication;
 using EventsWebApplication.Dtos;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -18,6 +19,12 @@ builder.Services.AddDbContext<EventsDbContext>(options =>
 
 builder.Services.AddAutoMapper(typeof(Program).Assembly);
 
+builder.Services.AddAuthorization();
+
+builder.Services
+    .AddIdentityApiEndpoints<IdentityUser>()
+    .AddEntityFrameworkStores<EventsDbContext>();
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -30,6 +37,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
+
+app.MapIdentityApi<IdentityUser>();
 
 app.MapControllers();
 

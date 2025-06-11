@@ -1,9 +1,11 @@
 ﻿using EventsWebApplication.Entities;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace EventsWebApplication;
 
-public class EventsDbContext : DbContext
+public class EventsDbContext : IdentityDbContext<IdentityUser>
 {
     public DbSet<Event> Events { get; set; }
     
