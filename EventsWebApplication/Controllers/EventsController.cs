@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using AutoMapper;
 using EventsWebApplication.Dtos;
 using EventsWebApplication.Entities;
 using Microsoft.AspNetCore.Mvc;
@@ -12,12 +13,18 @@ public class EventsController : ControllerBase
     private readonly EventsDbContext dbContext;
     private readonly UpdateEventDtoValidator updateEventDtoValidator;
     private readonly CreateEventDtoValidator createEventDtoValidator;
+    private readonly IMapper mapper;
     
-    public EventsController(EventsDbContext dbContext, CreateEventDtoValidator createEventDtoValidator, UpdateEventDtoValidator updateEventDtoValidator)
+    public EventsController(
+        EventsDbContext dbContext, 
+        CreateEventDtoValidator createEventDtoValidator, 
+        UpdateEventDtoValidator updateEventDtoValidator,
+        IMapper mapper)
     {
         this.dbContext = dbContext;
         this.createEventDtoValidator = createEventDtoValidator;
         this.updateEventDtoValidator = updateEventDtoValidator;
+        this.mapper = mapper;
     }
     
     [HttpGet("/events")]
@@ -43,17 +50,7 @@ public class EventsController : ControllerBase
             .Take(pageSize)
             .ToListAsync();
 
-        var eventDtos = events.Select(@event => new ShortEventDto
-        {
-            Id = @event.Id,
-            Title = @event.Title,
-            StartAt = @event.StartAt,
-            EndAt = @event.EndAt,
-            Location = @event.Location,
-            Category = @event.Category,
-            MaxParticipantsCount = @event.MaxParticipantsCount,
-            ImageFileId = @event.ImageFileId
-        });
+        var eventDtos = mapper.Map<List<ShortEventDto>>(events);
 
         var pageDto = new PageDto<ShortEventDto>
         {
@@ -77,19 +74,7 @@ public class EventsController : ControllerBase
             return NotFound();
         }
 
-        var fullEventDto = new FullEventDto()
-        {
-            Id = @event.Id,
-            Title = @event.Title,
-            Description = @event.Description,
-            StartAt = @event.StartAt,
-            EndAt = @event.EndAt,
-            Location = @event.Location,
-            Category = @event.Category,
-            MaxParticipantsCount = @event.MaxParticipantsCount,
-            ImageFileId = @event.ImageFileId
-        };
-        
+        var fullEventDto = mapper.Map<FullEventDto>(@event);
         return Ok(fullEventDto);
     }
 
@@ -113,34 +98,12 @@ public class EventsController : ControllerBase
             }
         }
 
-        var newEvent = new Event()
-        {
-            Id = Guid.NewGuid(),
-            Title = createEventDto.Title,
-            Description = createEventDto.Description,
-            StartAt = createEventDto.StartAt,
-            EndAt = createEventDto.EndAt,
-            Location = createEventDto.Location,
-            Category = createEventDto.Category,
-            MaxParticipantsCount = createEventDto.MaxParticipantsCount,
-            ImageFileId = createEventDto.ImageFileId
-        };
+        var newEvent = mapper.Map<Event>(createEventDto);
         
         dbContext.Add(newEvent);
         await dbContext.SaveChangesAsync();
         
-        var newFullEventDto = new FullEventDto()
-        {
-            Id = newEvent.Id,
-            Title = newEvent.Title,
-            Description = newEvent.Description,
-            StartAt = newEvent.StartAt,
-            EndAt = newEvent.EndAt,
-            Location = newEvent.Location,
-            Category = newEvent.Category,
-            MaxParticipantsCount = newEvent.MaxParticipantsCount,
-            ImageFileId = newEvent.ImageFileId
-        };
+        var newFullEventDto = mapper.Map<FullEventDto>(newEvent);
         
         return Ok(newFullEventDto);
     }
@@ -172,16 +135,8 @@ public class EventsController : ControllerBase
             }
         }
         
-        eventToUpdate.Title = updateEventDto.Title;
-        eventToUpdate.Description = updateEventDto.Description;
-        eventToUpdate.StartAt = updateEventDto.StartAt;
-        eventToUpdate.EndAt = updateEventDto.EndAt;
-        eventToUpdate.Location = updateEventDto.Location;
-        eventToUpdate.Category = updateEventDto.Category;
-        eventToUpdate.MaxParticipantsCount = updateEventDto.MaxParticipantsCount;
-        eventToUpdate.ImageFileId = updateEventDto.ImageFileId;
+        mapper.Map(updateEventDto, eventToUpdate);
         
-        dbContext.Update(eventToUpdate);
         await dbContext.SaveChangesAsync();
         
         return NoContent();
