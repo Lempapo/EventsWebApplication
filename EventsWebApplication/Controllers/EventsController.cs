@@ -2,6 +2,7 @@
 using AutoMapper;
 using EventsWebApplication.Dtos;
 using EventsWebApplication.Entities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,17 +15,20 @@ public class EventsController : ControllerBase
     private readonly UpdateEventDtoValidator updateEventDtoValidator;
     private readonly CreateEventDtoValidator createEventDtoValidator;
     private readonly IMapper mapper;
+    private readonly UserManager<ApplicationUser> userManager;
     
     public EventsController(
         EventsDbContext dbContext, 
         CreateEventDtoValidator createEventDtoValidator, 
         UpdateEventDtoValidator updateEventDtoValidator,
-        IMapper mapper)
+        IMapper mapper,
+        UserManager<ApplicationUser> userManager)
     {
         this.dbContext = dbContext;
         this.createEventDtoValidator = createEventDtoValidator;
         this.updateEventDtoValidator = updateEventDtoValidator;
         this.mapper = mapper;
+        this.userManager = userManager;
     }
     
     [HttpGet("/events")]
@@ -139,6 +143,32 @@ public class EventsController : ControllerBase
         
         await dbContext.SaveChangesAsync();
         
+        return NoContent();
+    }
+
+    [HttpPost("/events/{eventId:guid}/registrations")]
+    public async Task<IActionResult> EventRegistration(Guid eventId)
+    {
+        var events = await dbContext.Events
+            .Where(@event => @event.Id == eventId)
+            .SingleOrDefaultAsync();
+    
+        if (events is null)
+        {
+            return NotFound();
+        }
+    
+        var eventRegistration = new EventRegistration
+        {
+            Id = Guid.NewGuid(),
+            EventId = eventId,
+            UserId = userManager.GetUserId(User),
+            RegistrationDate = DateOnly.FromDateTime(DateTime.Today)
+        };
+        
+        dbContext.EventRegistrations.Add(eventRegistration);
+        await dbContext.SaveChangesAsync();
+
         return NoContent();
     }
 }

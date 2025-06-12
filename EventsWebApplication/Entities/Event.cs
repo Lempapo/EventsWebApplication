@@ -11,4 +11,6 @@ public class Event
     public string? Category { get; set; }
     public int MaxParticipantsCount { get; set; }
     public string? ImageFileId { get; set; }
+
+    public List<EventRegistration> EventRegistrations { get; set; }
 }
