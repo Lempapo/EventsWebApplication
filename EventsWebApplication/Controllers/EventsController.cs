@@ -2,6 +2,7 @@
 using AutoMapper;
 using EventsWebApplication.Dtos;
 using EventsWebApplication.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -147,6 +148,7 @@ public class EventsController : ControllerBase
     }
 
     [HttpPost("/events/{eventId:guid}/registrations")]
+    [Authorize]
     public async Task<IActionResult> EventRegistration(Guid eventId)
     {
         var events = await dbContext.Events

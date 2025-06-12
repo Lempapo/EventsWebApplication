@@ -12,4 +12,18 @@ public class EventsDbContext : IdentityDbContext<ApplicationUser>
     public EventsDbContext(DbContextOptions<EventsDbContext> options) 
         : base(options) 
     { }
+    
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+        
+        modelBuilder
+            .Entity<EventRegistration>()
+            .HasIndex(eventRegistration => new
+            {
+                eventRegistration.EventId, 
+                eventRegistration.UserId 
+            })
+            .IsUnique();
+    }
 }
