@@ -44,7 +44,7 @@ public class EventsController : ControllerBase
         var filteredEventsQuery = dbContext.Events
             .Where(@event => string.IsNullOrEmpty(title) || EF.Functions.ILike(@event.Title, $"%{title}%"))
             .Where(@event => string.IsNullOrEmpty(location) || EF.Functions.ILike(@event.Location, $"%{location}%"))
-            .Where(@event => string.IsNullOrEmpty(category) || EF.Functions.ILike(@event.Category, $"%{category}%"))
+            .Where(@event => string.IsNullOrEmpty(category) || @event.Category != null && EF.Functions.ILike(@event.Category, $"%{category}%"))
             .Where(@event => date == null || DateOnly.FromDateTime(@event.StartAt) <= date && DateOnly.FromDateTime(@event.EndAt) >= date);
         
         var eventsCount = await filteredEventsQuery.CountAsync();
@@ -151,21 +151,32 @@ public class EventsController : ControllerBase
     [Authorize]
     public async Task<IActionResult> EventRegistration(Guid eventId)
     {
-        var events = await dbContext.Events
+        var @event = await dbContext.Events
             .Where(@event => @event.Id == eventId)
             .SingleOrDefaultAsync();
     
-        if (events is null)
+        if (@event is null)
         {
             return NotFound();
         }
 
         var currentUser = await userManager.GetUserAsync(User);
-        
+
         var isUserRegistered = await dbContext.EventRegistrations
-            .AnyAsync(r => r.UserId == currentUser!.Id && r.EventId == eventId);
+            .Where(eventRegistration => eventRegistration.UserId == currentUser!.Id)
+            .Where(eventRegistration => eventRegistration.EventId == eventId)
+            .AnyAsync();
 
         if (isUserRegistered)
+        {
+            return BadRequest();
+        }
+        
+        var eventRegistrationsCount = await dbContext.EventRegistrations
+            .Where(eventRegistration => eventRegistration.EventId == eventId)
+            .CountAsync();
+
+        if (eventRegistrationsCount >= @event.MaxParticipantsCount)
         {
             return BadRequest();
         }
