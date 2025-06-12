@@ -159,18 +159,27 @@ public class EventsController : ControllerBase
         {
             return NotFound();
         }
+
+        var currentUser = await userManager.GetUserAsync(User);
+        
+        var isUserRegistered = await dbContext.EventRegistrations
+            .AnyAsync(r => r.UserId == currentUser!.Id && r.EventId == eventId);
+
+        if (isUserRegistered)
+        {
+            return BadRequest();
+        }
     
         var eventRegistration = new EventRegistration
         {
             Id = Guid.NewGuid(),
             EventId = eventId,
-            UserId = userManager.GetUserId(User),
+            UserId = currentUser!.Id,
             RegistrationDate = DateOnly.FromDateTime(DateTime.Today)
         };
         
         dbContext.EventRegistrations.Add(eventRegistration);
         await dbContext.SaveChangesAsync();
-
         return NoContent();
     }
 }
