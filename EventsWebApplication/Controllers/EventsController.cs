@@ -85,6 +85,7 @@ public class EventsController : ControllerBase
     }
 
     [HttpPost("/events")]
+    [Authorize(Policy = "AdminPolicy")]
     public async Task<IActionResult> CreateEvent(CreateEventDto createEventDto)
     {
         var createEventDtoValidationResult = createEventDtoValidator.Validate(createEventDto);
@@ -115,6 +116,7 @@ public class EventsController : ControllerBase
     }
     
     [HttpPut("/events/{id:guid}")]
+    [Authorize(Policy = "AdminPolicy")]
     public async Task<IActionResult> EditEvent(Guid id, UpdateEventDto updateEventDto)
     {
         var updateEventValidatorResult = updateEventDtoValidator.Validate(updateEventDto);

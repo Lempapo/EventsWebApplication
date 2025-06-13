@@ -44,7 +44,13 @@ builder.Services.AddDbContext<EventsDbContext>(options =>
 
 builder.Services.AddAutoMapper(typeof(Program).Assembly);   
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(
+        "AdminPolicy",
+        policy => policy.RequireClaim("CanManageEvents", "true")
+    );
+});
 
 builder.Services
     .AddIdentityApiEndpoints<ApplicationUser>()
