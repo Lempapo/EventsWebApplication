@@ -231,11 +231,14 @@ public class EventsController : ControllerBase
             return NotFound();
         }
         
-        var participantsDtos = @event.EventRegistrations
-            .Select(eventRegistrations => eventRegistrations.User)
-            .Select(user => mapper.Map<EventParticipantDto>(user));
+        var eventRegistrations = await dbContext.EventRegistrations
+            .Include(eventRegistration => eventRegistration.User)
+            .Where(eventRegistration => eventRegistration.EventId == eventId)
+            .ToListAsync();
         
-        return Ok(participantsDtos);
+        var eventRegistrationDtos = eventRegistrations.Select(eventRegistration => mapper.Map<EventParticipantDto>(eventRegistration));
+
+        return Ok(eventRegistrationDtos);
     }
     
     [HttpDelete("/events/{eventId:guid}/registrations")]

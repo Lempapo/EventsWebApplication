@@ -7,4 +7,5 @@ public class EventParticipantDto
     public string FirstName { get; init; }
     public string LastName { get; init; }
     public string UserName { get; init; }
+    public DateOnly RegistrationDate { get; init; }
 }
