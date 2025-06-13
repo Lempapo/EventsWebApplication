@@ -193,4 +193,24 @@ public class EventsController : ControllerBase
         await dbContext.SaveChangesAsync();
         return NoContent();
     }
+
+    [HttpPost("/events/{eventId:guid}/participants")]
+    public async Task<IActionResult> GetEventParticipants(Guid eventId)
+    {
+        var @event = await dbContext.Events
+            .Include(@event => @event.EventRegistrations)
+            .ThenInclude(eventRegistration => eventRegistration.User)
+            .SingleOrDefaultAsync(@event => @event.Id == eventId);
+
+        if (@event is null)
+        {
+            return NotFound();
+        }
+        
+        var participantsDtos = @event.EventRegistrations
+            .Select(eventRegistrations => eventRegistrations.User)
+            .Select(user => mapper.Map<EventParticipantDto>(user));
+        
+        return Ok(participantsDtos);
+    }
 }
