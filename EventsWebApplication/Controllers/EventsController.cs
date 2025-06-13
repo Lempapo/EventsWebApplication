@@ -141,12 +141,23 @@ public class EventsController : ControllerBase
             }
         }
         
+        // Scenario:
+        // 1. Event with max participants count = 50 created.
+        // 2. 50 users registered for the event.
+        // 3. User changed max participants count from 50 to 20.
+        // 4. Now we have event with max participants count = 20 and current participants count = 50.
+        
         mapper.Map(updateEventDto, eventToUpdate);
         
         await dbContext.SaveChangesAsync();
         
         return NoContent();
     }
+    
+    // Event deletion options:
+    // a) Notify registered users.
+    // b) Don't delete event if there are users registered for it.
+    // c) Delete event without notifying users.
 
     [HttpPost("/events/{eventId:guid}/registrations")]
     [Authorize]
