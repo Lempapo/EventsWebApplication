@@ -149,6 +149,13 @@ public class EventsController : ControllerBase
         // 3. User changed max participants count from 50 to 20.
         // 4. Now we have event with max participants count = 20 and current participants count = 50.
         
+        // Scenario:
+        // 1. Admin #1 creates a new event.
+        // 2. Admin #2 edits this event.
+        // 3. Admin #1 doesn't like it and edits it back.
+        // 4. Admin #2 edits this event again.
+        // We can forbid admins from editing other admin's events.
+        
         mapper.Map(updateEventDto, eventToUpdate);
         
         await dbContext.SaveChangesAsync();
