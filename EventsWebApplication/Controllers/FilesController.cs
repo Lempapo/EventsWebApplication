@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace EventsWebApplication.Controllers;
 
@@ -6,6 +7,7 @@ namespace EventsWebApplication.Controllers;
 public class FilesController : ControllerBase
 {
     [HttpPost("/files")]
+    [Authorize(Policy = "AdminPolicy")]
     public async Task<IActionResult> UploadFile(IFormFile file)
     {
         if (file.Length == 0)

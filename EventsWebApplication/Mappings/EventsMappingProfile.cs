@@ -8,10 +8,13 @@ public class EventsMappingProfile : Profile
 {
     public EventsMappingProfile() 
     {
-        CreateMap<Event, FullEventDto>();
-        
         CreateMap<Event, ShortEventDto>().ForMember(
             shortEventDto => shortEventDto.CurrentParticipantsCount,
+            options => options.MapFrom(@event => @event.EventRegistrations.Count)
+        );
+
+        CreateMap<Event, FullEventDto>().ForMember(
+            fullEventDto => fullEventDto.CurrentParticipantsCount,
             options => options.MapFrom(@event => @event.EventRegistrations.Count)
         );
         

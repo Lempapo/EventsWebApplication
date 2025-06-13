@@ -69,18 +69,20 @@ public class EventsController : ControllerBase
         return Ok(pageDto);
     }
 
-    [HttpGet("/events/{id:guid}")]
-    public async Task<IActionResult> GetEventById(Guid id)
+    [HttpGet("/events/{eventId:guid}")]
+    public async Task<IActionResult> GetEventById(Guid eventId)
     {
         var @event = await dbContext.Events
-            .SingleOrDefaultAsync(@event => @event.Id == id);
-        
+            .Include(@event => @event.EventRegistrations)
+            .SingleOrDefaultAsync(@event => @event.Id == eventId);
+
         if (@event is null)
         {
             return NotFound();
         }
 
         var fullEventDto = mapper.Map<FullEventDto>(@event);
+        
         return Ok(fullEventDto);
     }
 
@@ -115,9 +117,9 @@ public class EventsController : ControllerBase
         return Ok(newFullEventDto);
     }
     
-    [HttpPut("/events/{id:guid}")]
+    [HttpPut("/events/{eventId:guid}")]
     [Authorize(Policy = "AdminPolicy")]
-    public async Task<IActionResult> EditEvent(Guid id, UpdateEventDto updateEventDto)
+    public async Task<IActionResult> EditEvent(Guid eventId, UpdateEventDto updateEventDto)
     {
         var updateEventValidatorResult = updateEventDtoValidator.Validate(updateEventDto);
         
@@ -126,7 +128,7 @@ public class EventsController : ControllerBase
             return BadRequest(updateEventValidatorResult.Errors);
         }
         
-        var eventToUpdate = await dbContext.Events.SingleOrDefaultAsync(@event => @event.Id == id);
+        var eventToUpdate = await dbContext.Events.SingleOrDefaultAsync(@event => @event.Id == eventId);
         
         if (eventToUpdate is null)
         {
@@ -214,8 +216,9 @@ public class EventsController : ControllerBase
         await dbContext.SaveChangesAsync();
         return NoContent();
     }
-
+    
     [HttpGet("/events/{eventId:guid}/participants")]
+    [Authorize(Policy = "AdminPolicy")]
     public async Task<IActionResult> GetEventParticipants(Guid eventId)
     {
         var @event = await dbContext.Events
@@ -234,9 +237,9 @@ public class EventsController : ControllerBase
         
         return Ok(participantsDtos);
     }
-
-    [Authorize]
+    
     [HttpDelete("/events/{eventId:guid}/registrations")]
+    [Authorize]
     public async Task<IActionResult> UnregisterFromEvent(Guid eventId)
     {
         var @event = await dbContext.Events
