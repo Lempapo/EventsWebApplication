@@ -149,7 +149,7 @@ public class EventsController : ControllerBase
 
     [HttpPost("/events/{eventId:guid}/registrations")]
     [Authorize]
-    public async Task<IActionResult> EventRegistration(Guid eventId)
+    public async Task<IActionResult> RegisterForEvent(Guid eventId)
     {
         var @event = await dbContext.Events
             .Where(@event => @event.Id == eventId)
@@ -194,7 +194,7 @@ public class EventsController : ControllerBase
         return NoContent();
     }
 
-    [HttpPost("/events/{eventId:guid}/participants")]
+    [HttpGet("/events/{eventId:guid}/participants")]
     public async Task<IActionResult> GetEventParticipants(Guid eventId)
     {
         var @event = await dbContext.Events
@@ -212,5 +212,36 @@ public class EventsController : ControllerBase
             .Select(user => mapper.Map<EventParticipantDto>(user));
         
         return Ok(participantsDtos);
+    }
+
+    [Authorize]
+    [HttpDelete("/events/{eventId:guid}/registrations")]
+    public async Task<IActionResult> UnregisterFromEvent(Guid eventId)
+    {
+        var @event = await dbContext.Events
+            .Where(@event => @event.Id == eventId)
+            .SingleOrDefaultAsync();
+        
+        if (@event is null)
+        {
+            return NotFound();
+        }
+        
+        var currentUser = await userManager.GetUserAsync(User);
+        
+        var eventRegistration = await dbContext.EventRegistrations
+            .Where(eventRegistration => eventRegistration.EventId == eventId)
+            .Where(eventRegistration => eventRegistration.UserId == currentUser!.Id)
+            .SingleOrDefaultAsync();
+
+        if (eventRegistration is null)
+        {
+            return BadRequest();
+        }
+        
+        dbContext.EventRegistrations.Remove(eventRegistration);
+        await dbContext.SaveChangesAsync();
+        
+        return Ok();
     }
 }
