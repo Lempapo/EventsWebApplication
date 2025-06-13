@@ -50,13 +50,14 @@ public class EventsController : ControllerBase
         var eventsCount = await filteredEventsQuery.CountAsync();
         
         var events = await filteredEventsQuery
+            .Include(@event => @event.EventRegistrations)
             .OrderBy(@event => @event.StartAt)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
-
+        
         var eventDtos = mapper.Map<List<ShortEventDto>>(events);
-
+        
         var pageDto = new PageDto<ShortEventDto>
         {
             Items = eventDtos.ToList(),
