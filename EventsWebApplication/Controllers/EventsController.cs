@@ -2,34 +2,34 @@
 using AutoMapper;
 using EventsWebApplication.Dtos;
 using EventsWebApplication.Entities;
+using EventsWebApplication.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace EventsWebApplication.Controllers;
 
 [ApiController]
 public class EventsController : ControllerBase
 {
-    private readonly EventsDbContext dbContext;
     private readonly UpdateEventDtoValidator updateEventDtoValidator;
     private readonly CreateEventDtoValidator createEventDtoValidator;
     private readonly IMapper mapper;
     private readonly UserManager<ApplicationUser> userManager;
-    
-    public EventsController(
-        EventsDbContext dbContext, 
+    private readonly EventsRepository eventsRepository;
+
+    public EventsController( 
         CreateEventDtoValidator createEventDtoValidator, 
         UpdateEventDtoValidator updateEventDtoValidator,
         IMapper mapper,
-        UserManager<ApplicationUser> userManager)
+        UserManager<ApplicationUser> userManager,
+        EventsRepository eventsRepository)
     {
-        this.dbContext = dbContext;
         this.createEventDtoValidator = createEventDtoValidator;
         this.updateEventDtoValidator = updateEventDtoValidator;
         this.mapper = mapper;
         this.userManager = userManager;
+        this.eventsRepository = eventsRepository;
     }
     
     [HttpGet("/events")]
@@ -41,29 +41,23 @@ public class EventsController : ControllerBase
         [Required][Range(1, int.MaxValue)] int pageNumber, 
         [Required][Range(1, 50)] int pageSize)
     {
-        var filteredEventsQuery = dbContext.Events
-            .Where(@event => string.IsNullOrEmpty(title) || EF.Functions.ILike(@event.Title, $"%{title}%"))
-            .Where(@event => string.IsNullOrEmpty(location) || EF.Functions.ILike(@event.Location, $"%{location}%"))
-            .Where(@event => string.IsNullOrEmpty(category) || @event.Category != null && EF.Functions.ILike(@event.Category, $"%{category}%"))
-            .Where(@event => date == null || DateOnly.FromDateTime(@event.StartAt) <= date && DateOnly.FromDateTime(@event.EndAt) >= date);
+        var (paginatedEvents, totalEventsCount) = await eventsRepository.GetPaginatedEventsAsync(
+            title,
+            location,
+            category,
+            date,
+            pageNumber,
+            pageSize
+        );
         
-        var eventsCount = await filteredEventsQuery.CountAsync();
-        
-        var events = await filteredEventsQuery
-            .Include(@event => @event.EventRegistrations)
-            .OrderBy(@event => @event.StartAt)
-            .Skip((pageNumber - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync();
-        
-        var eventDtos = mapper.Map<List<ShortEventDto>>(events);
+        var eventDtos = mapper.Map<List<ShortEventDto>>(paginatedEvents);
         
         var pageDto = new PageDto<ShortEventDto>
         {
             Items = eventDtos.ToList(),
-            TotalItemsCount = eventsCount,
+            TotalItemsCount = totalEventsCount,
             PageSize = pageSize,
-            PagesCount = (int)Math.Ceiling((double)eventsCount / pageSize)
+            PagesCount = (int)Math.Ceiling((double)totalEventsCount / pageSize)
         };
         
         return Ok(pageDto);
@@ -72,10 +66,8 @@ public class EventsController : ControllerBase
     [HttpGet("/events/{eventId:guid}")]
     public async Task<IActionResult> GetEventById(Guid eventId)
     {
-        var @event = await dbContext.Events
-            .Include(@event => @event.EventRegistrations)
-            .SingleOrDefaultAsync(@event => @event.Id == eventId);
-
+        var @event = await eventsRepository.GetEventByIdOrDefaultAsync(eventId);
+        
         if (@event is null)
         {
             return NotFound();
@@ -109,8 +101,7 @@ public class EventsController : ControllerBase
 
         var newEvent = mapper.Map<Event>(createEventDto);
         
-        dbContext.Add(newEvent);
-        await dbContext.SaveChangesAsync();
+        await eventsRepository.InsertEventAsync(newEvent);
         
         var newFullEventDto = mapper.Map<FullEventDto>(newEvent);
         
@@ -127,8 +118,8 @@ public class EventsController : ControllerBase
         {
             return BadRequest(updateEventValidatorResult.Errors);
         }
-        
-        var eventToUpdate = await dbContext.Events.SingleOrDefaultAsync(@event => @event.Id == eventId);
+
+        var eventToUpdate = await eventsRepository.GetEventByIdOrDefaultAsync(eventId);
         
         if (eventToUpdate is null)
         {
@@ -160,7 +151,7 @@ public class EventsController : ControllerBase
         
         mapper.Map(updateEventDto, eventToUpdate);
         
-        await dbContext.SaveChangesAsync();
+        await eventsRepository.UpdateEventAsync(eventToUpdate);
         
         return NoContent();
     }
@@ -174,9 +165,7 @@ public class EventsController : ControllerBase
     [Authorize]
     public async Task<IActionResult> RegisterForEvent(Guid eventId)
     {
-        var @event = await dbContext.Events
-            .Where(@event => @event.Id == eventId)
-            .SingleOrDefaultAsync();
+        var @event = await eventsRepository.GetEventByIdOrDefaultAsync(eventId);
     
         if (@event is null)
         {
@@ -184,20 +173,14 @@ public class EventsController : ControllerBase
         }
 
         var currentUser = await userManager.GetUserAsync(User);
-
-        var isUserRegistered = await dbContext.EventRegistrations
-            .Where(eventRegistration => eventRegistration.UserId == currentUser!.Id)
-            .Where(eventRegistration => eventRegistration.EventId == eventId)
-            .AnyAsync();
+        var isUserRegistered = await eventsRepository.IsUserRegisteredForEventAsync(eventId, currentUser!.Id);
 
         if (isUserRegistered)
         {
             return BadRequest();
         }
-        
-        var eventRegistrationsCount = await dbContext.EventRegistrations
-            .Where(eventRegistration => eventRegistration.EventId == eventId)
-            .CountAsync();
+       
+        var eventRegistrationsCount = await eventsRepository.GetEventRegistrationsCountAsync(eventId);
 
         if (eventRegistrationsCount >= @event.MaxParticipantsCount)
         {
@@ -211,9 +194,9 @@ public class EventsController : ControllerBase
             UserId = currentUser!.Id,
             RegistrationDate = DateOnly.FromDateTime(DateTime.Today)
         };
+
+        await eventsRepository.InsertEventRegistrationAsync(eventRegistration);
         
-        dbContext.EventRegistrations.Add(eventRegistration);
-        await dbContext.SaveChangesAsync();
         return NoContent();
     }
     
@@ -221,20 +204,14 @@ public class EventsController : ControllerBase
     [Authorize(Policy = "AdminPolicy")]
     public async Task<IActionResult> GetEventParticipants(Guid eventId)
     {
-        var @event = await dbContext.Events
-            .Include(@event => @event.EventRegistrations)
-            .ThenInclude(eventRegistration => eventRegistration.User)
-            .SingleOrDefaultAsync(@event => @event.Id == eventId);
+        var @event = await eventsRepository.GetEventByIdOrDefaultAsync(eventId);
 
         if (@event is null)
         {
             return NotFound();
         }
         
-        var eventRegistrations = await dbContext.EventRegistrations
-            .Include(eventRegistration => eventRegistration.User)
-            .Where(eventRegistration => eventRegistration.EventId == eventId)
-            .ToListAsync();
+        var eventRegistrations = await eventsRepository.GetEventRegistrationsAsync(eventId);
         
         var eventRegistrationDtos = eventRegistrations.Select(eventRegistration => mapper.Map<ShortEventParticipantDto>(eventRegistration));
 
@@ -245,9 +222,7 @@ public class EventsController : ControllerBase
     [Authorize]
     public async Task<IActionResult> UnregisterFromEvent(Guid eventId)
     {
-        var @event = await dbContext.Events
-            .Where(@event => @event.Id == eventId)
-            .SingleOrDefaultAsync();
+        var @event = await eventsRepository.GetEventByIdOrDefaultAsync(eventId);
         
         if (@event is null)
         {
@@ -255,19 +230,15 @@ public class EventsController : ControllerBase
         }
         
         var currentUser = await userManager.GetUserAsync(User);
-        
-        var eventRegistration = await dbContext.EventRegistrations
-            .Where(eventRegistration => eventRegistration.EventId == eventId)
-            .Where(eventRegistration => eventRegistration.UserId == currentUser!.Id)
-            .SingleOrDefaultAsync();
+       
+        var eventRegistration = await eventsRepository.GetEventRegistrationOrDefaultAsync(eventId, currentUser!.Id);
 
         if (eventRegistration is null)
         {
             return BadRequest();
         }
         
-        dbContext.EventRegistrations.Remove(eventRegistration);
-        await dbContext.SaveChangesAsync();
+        await eventsRepository.DeleteFromEventRegistrationsAsync(eventRegistration);
         
         return Ok();
     }
@@ -278,10 +249,7 @@ public class EventsController : ControllerBase
     {
         var user = await userManager.GetUserAsync(User);
         
-        var events = await dbContext.EventRegistrations
-            .Where(@event => @event.UserId == user!.Id)
-            .Select(@event => @event.Event)
-            .ToListAsync();
+        var events = await eventsRepository.GetUserEventsAsync(user!.Id);
         
         return Ok(events);
     }
@@ -290,11 +258,7 @@ public class EventsController : ControllerBase
     [Authorize(Policy = "AdminPolicy")]
     public async Task<IActionResult> GetEventParticipant(Guid eventId, string participantId)
     {
-        var @event = await dbContext.Events
-            .Where(@event => @event.Id == eventId)
-            .Include(@event => @event.EventRegistrations)
-            .ThenInclude(eventRegistration => eventRegistration.User)
-            .SingleOrDefaultAsync();
+        var @event = await eventsRepository.GetEventByIdOrDefaultAsync(eventId);
 
         if (@event is null)
         {

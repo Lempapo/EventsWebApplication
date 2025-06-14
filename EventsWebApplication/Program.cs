@@ -1,6 +1,7 @@
 using EventsWebApplication;
 using EventsWebApplication.Dtos;
 using EventsWebApplication.Entities;
+using EventsWebApplication.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 
@@ -55,6 +56,8 @@ builder.Services.AddAuthorization(options =>
 builder.Services
     .AddIdentityApiEndpoints<ApplicationUser>()
     .AddEntityFrameworkStores<EventsDbContext>();
+
+builder.Services.AddScoped<EventsRepository>();
 
 var app = builder.Build();
 
