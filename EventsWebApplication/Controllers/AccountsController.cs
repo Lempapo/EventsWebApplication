@@ -22,7 +22,7 @@ public class AccountsController : ControllerBase
     }
 
     [HttpPost("/users/register")]
-    public async Task<IActionResult> Register(RegisterDto registerUserDto)
+    public async Task<IActionResult> Register(RegisterUserDto registerUserDto)
     {
         var user = mapper.Map<ApplicationUser>(registerUserDto);
 
@@ -36,7 +36,7 @@ public class AccountsController : ControllerBase
     }
     
     [HttpPost("/admins/register")]
-    public async Task<IActionResult> RegisterAdmin(RegisterDto registerUserDto)
+    public async Task<IActionResult> RegisterAdmin(RegisterUserDto registerUserDto)
     {
         var admin = mapper.Map<ApplicationUser>(registerUserDto);
         

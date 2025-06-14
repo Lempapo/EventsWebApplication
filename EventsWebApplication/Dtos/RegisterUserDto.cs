@@ -1,6 +1,6 @@
 ﻿namespace EventsWebApplication.Dtos;
 
-public class RegisterDto
+public class RegisterUserDto
 {
     public string Email { get; set; }
     public string Password { get; set; }
@@ -9,5 +9,5 @@ public class RegisterDto
     
     public string LastName { get; set; }
     
-    public DateTime Birthday { get; set; }
+    public DateOnly Birthday { get; set; }
 }
