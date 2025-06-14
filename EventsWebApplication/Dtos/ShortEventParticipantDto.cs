@@ -2,7 +2,7 @@
 
 namespace EventsWebApplication.Dtos;
 
-public class EventParticipantDto
+public class ShortEventParticipantDto
 {
     public string FirstName { get; init; }
     public string LastName { get; init; }

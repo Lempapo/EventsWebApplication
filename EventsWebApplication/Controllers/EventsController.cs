@@ -236,7 +236,7 @@ public class EventsController : ControllerBase
             .Where(eventRegistration => eventRegistration.EventId == eventId)
             .ToListAsync();
         
-        var eventRegistrationDtos = eventRegistrations.Select(eventRegistration => mapper.Map<EventParticipantDto>(eventRegistration));
+        var eventRegistrationDtos = eventRegistrations.Select(eventRegistration => mapper.Map<ShortEventParticipantDto>(eventRegistration));
 
         return Ok(eventRegistrationDtos);
     }
@@ -270,5 +270,48 @@ public class EventsController : ControllerBase
         await dbContext.SaveChangesAsync();
         
         return Ok();
+    }
+    
+    [HttpGet("/user/events")]
+    [Authorize]
+    public async Task<IActionResult> GetUserEvents()
+    {
+        var user = await userManager.GetUserAsync(User);
+        
+        var events = await dbContext.EventRegistrations
+            .Where(@event => @event.UserId == user!.Id)
+            .Select(@event => @event.Event)
+            .ToListAsync();
+        
+        return Ok(events);
+    }
+    
+    [HttpGet("/events/{eventId:guid}/participants/{participantId}")]
+    [Authorize(Policy = "AdminPolicy")]
+    public async Task<IActionResult> GetEventParticipant(Guid eventId, string participantId)
+    {
+        var @event = await dbContext.Events
+            .Where(@event => @event.Id == eventId)
+            .Include(@event => @event.EventRegistrations)
+            .ThenInclude(eventRegistration => eventRegistration.User)
+            .SingleOrDefaultAsync();
+
+        if (@event is null)
+        {
+            return NotFound();
+        }
+
+        var eventRegistration = @event.EventRegistrations
+            .Where(eventRegistration => eventRegistration.UserId == participantId)
+            .SingleOrDefault();
+
+        if (eventRegistration is null)
+        {
+            return NotFound();
+        }
+        
+        var userDto = mapper.Map<FullEventParticipantDto>(eventRegistration);
+        
+        return Ok(userDto);
     }
 }

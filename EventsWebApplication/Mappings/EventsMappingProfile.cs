@@ -25,16 +25,31 @@ public class EventsMappingProfile : Profile
             options => options.MapFrom(_ => Guid.NewGuid())
         );
 
-        CreateMap<EventRegistration, EventParticipantDto>()
+        CreateMap<EventRegistration, ShortEventParticipantDto>()
             .ForMember(
                 eventParticipantDto => eventParticipantDto.FirstName,
-                options => options.MapFrom(eventRegistration => eventRegistration.User.UserName))
+                options => options.MapFrom(eventRegistration => eventRegistration.User.FirstName))
             .ForMember(
                 eventParticipantDto => eventParticipantDto.LastName,
                 options => options.MapFrom(eventRegistration => eventRegistration.User.LastName))
             .ForMember(
                 eventParticipantDto => eventParticipantDto.UserName,
                 options => options.MapFrom(eventRegistration => eventRegistration.User.UserName)
+            );
+
+        CreateMap<EventRegistration, FullEventParticipantDto>().ForMember(
+                shortUserDto => shortUserDto.Id,
+                options => options.MapFrom(eventRegistration => eventRegistration.User.Id))
+            .ForMember(
+                shortUserDto => shortUserDto.FirstName,
+                options => options.MapFrom(eventRegistration => eventRegistration.User.FirstName))
+            .ForMember(
+                shortUserDto => shortUserDto.LastName,
+                options => options.MapFrom(eventRegistration => eventRegistration.User.LastName)
+            )
+            .ForMember(
+                shortUserDto => shortUserDto.Birthday,
+                options => options.MapFrom(eventRegistration => eventRegistration.User.Birthday)
             );
     }
 }
