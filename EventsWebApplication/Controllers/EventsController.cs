@@ -17,19 +17,22 @@ public class EventsController : ControllerBase
     private readonly IMapper mapper;
     private readonly UserManager<ApplicationUser> userManager;
     private readonly EventsRepository eventsRepository;
+    private readonly EventRegistrationsRepository eventRegistrationsRepository;
 
     public EventsController( 
         CreateEventDtoValidator createEventDtoValidator, 
         UpdateEventDtoValidator updateEventDtoValidator,
         IMapper mapper,
         UserManager<ApplicationUser> userManager,
-        EventsRepository eventsRepository)
+        EventsRepository eventsRepository,
+        EventRegistrationsRepository eventRegistrationsRepository)
     {
         this.createEventDtoValidator = createEventDtoValidator;
         this.updateEventDtoValidator = updateEventDtoValidator;
         this.mapper = mapper;
         this.userManager = userManager;
         this.eventsRepository = eventsRepository;
+        this.eventRegistrationsRepository = eventRegistrationsRepository;
     }
     
     [HttpGet("/events")]
@@ -173,14 +176,14 @@ public class EventsController : ControllerBase
         }
 
         var currentUser = await userManager.GetUserAsync(User);
-        var isUserRegistered = await eventsRepository.IsUserRegisteredForEventAsync(eventId, currentUser!.Id);
+        var isUserRegistered = await eventRegistrationsRepository.IsUserRegisteredForEventAsync(eventId, currentUser!.Id);
 
         if (isUserRegistered)
         {
             return BadRequest();
         }
        
-        var eventRegistrationsCount = await eventsRepository.GetEventRegistrationsCountAsync(eventId);
+        var eventRegistrationsCount = await eventRegistrationsRepository.GetEventRegistrationsCountAsync(eventId);
 
         if (eventRegistrationsCount >= @event.MaxParticipantsCount)
         {
@@ -195,7 +198,7 @@ public class EventsController : ControllerBase
             RegistrationDate = DateOnly.FromDateTime(DateTime.Today)
         };
 
-        await eventsRepository.InsertEventRegistrationAsync(eventRegistration);
+        await eventRegistrationsRepository.InsertEventRegistrationAsync(eventRegistration);
         
         return NoContent();
     }
@@ -211,7 +214,7 @@ public class EventsController : ControllerBase
             return NotFound();
         }
         
-        var eventRegistrations = await eventsRepository.GetEventRegistrationsAsync(eventId);
+        var eventRegistrations = await eventRegistrationsRepository.GetEventRegistrationsAsync(eventId);
         
         var eventRegistrationDtos = eventRegistrations.Select(eventRegistration => mapper.Map<ShortEventParticipantDto>(eventRegistration));
 
@@ -231,14 +234,14 @@ public class EventsController : ControllerBase
         
         var currentUser = await userManager.GetUserAsync(User);
        
-        var eventRegistration = await eventsRepository.GetEventRegistrationOrDefaultAsync(eventId, currentUser!.Id);
+        var eventRegistration = await eventRegistrationsRepository.GetEventRegistrationOrDefaultAsync(eventId, currentUser!.Id);
 
         if (eventRegistration is null)
         {
             return BadRequest();
         }
         
-        await eventsRepository.DeleteFromEventRegistrationsAsync(eventRegistration);
+        await eventRegistrationsRepository.DeleteFromEventRegistrationsAsync(eventRegistration);
         
         return Ok();
     }
@@ -249,7 +252,7 @@ public class EventsController : ControllerBase
     {
         var user = await userManager.GetUserAsync(User);
         
-        var events = await eventsRepository.GetUserEventsAsync(user!.Id);
+        var events = await eventRegistrationsRepository.GetUserEventsAsync(user!.Id);
         
         return Ok(events);
     }

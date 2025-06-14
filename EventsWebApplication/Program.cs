@@ -58,6 +58,7 @@ builder.Services
     .AddEntityFrameworkStores<EventsDbContext>();
 
 builder.Services.AddScoped<EventsRepository>();
+builder.Services.AddScoped<EventRegistrationsRepository>();
 
 var app = builder.Build();
 
