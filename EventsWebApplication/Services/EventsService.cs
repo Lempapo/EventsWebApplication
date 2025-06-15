@@ -157,16 +157,6 @@ public class EventsService
             throw new ResourceNotFoundException($"Event with ID: {eventId} doesn't exist");
         }
         
-        if (updateEventDto.ImageFileId is not null && eventToUpdate.ImageFileId != updateEventDto.ImageFileId)
-        {
-            var filePath = Path.Combine(Directory.GetCurrentDirectory(), "uploads", updateEventDto.ImageFileId);
-        
-            if (!File.Exists(filePath))
-            {
-                throw new ResourceNotFoundException("File doesn't exist");
-            }
-        }
-        
         mapper.Map(updateEventDto, eventToUpdate);
         
         await eventsRepository.UpdateEventAsync(eventToUpdate);

@@ -87,6 +87,17 @@ public class EventsController : ControllerBase
             return BadRequest(updateEventValidatorResult.Errors);
         }
         
+        if (updateEventDto.ImageFileId is not null)
+        {
+            var filePath = Path.Combine(Directory.GetCurrentDirectory(), "uploads", updateEventDto.ImageFileId);
+        
+            if (!System.IO.File.Exists(filePath))
+            {
+                return NotFound();
+            }
+        }
+
+        
         await eventsService.EditEvent(eventId, updateEventDto);
         
         return NoContent();
