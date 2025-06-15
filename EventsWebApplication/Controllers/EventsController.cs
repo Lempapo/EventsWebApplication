@@ -3,6 +3,7 @@ using AutoMapper;
 using EventsWebApplication.Dtos;
 using EventsWebApplication.Entities;
 using EventsWebApplication.Repositories;
+using EventsWebApplication.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -18,6 +19,7 @@ public class EventsController : ControllerBase
     private readonly UserManager<ApplicationUser> userManager;
     private readonly EventsRepository eventsRepository;
     private readonly EventRegistrationsRepository eventRegistrationsRepository;
+    private readonly EventsService eventsService;
 
     public EventsController( 
         CreateEventDtoValidator createEventDtoValidator, 
@@ -25,7 +27,8 @@ public class EventsController : ControllerBase
         IMapper mapper,
         UserManager<ApplicationUser> userManager,
         EventsRepository eventsRepository,
-        EventRegistrationsRepository eventRegistrationsRepository)
+        EventRegistrationsRepository eventRegistrationsRepository,
+        EventsService eventsService)
     {
         this.createEventDtoValidator = createEventDtoValidator;
         this.updateEventDtoValidator = updateEventDtoValidator;
@@ -33,6 +36,7 @@ public class EventsController : ControllerBase
         this.userManager = userManager;
         this.eventsRepository = eventsRepository;
         this.eventRegistrationsRepository = eventRegistrationsRepository;
+        this.eventsService = eventsService;
     }
     
     [HttpGet("/events")]
@@ -69,16 +73,8 @@ public class EventsController : ControllerBase
     [HttpGet("/events/{eventId:guid}")]
     public async Task<IActionResult> GetEventById(Guid eventId)
     {
-        var @event = await eventsRepository.GetEventByIdOrDefaultAsync(eventId);
-        
-        if (@event is null)
-        {
-            return NotFound();
-        }
-
-        var fullEventDto = mapper.Map<FullEventDto>(@event);
-        
-        return Ok(fullEventDto);
+        var @event = await eventsService.GetEventById(eventId);
+        return Ok(@event);
     }
 
     [HttpPost("/events")]

@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using EventsWebApplication.Exceptions;
 
 public class ExceptionHandlingMiddleware
 {
@@ -17,25 +18,29 @@ public class ExceptionHandlingMiddleware
         {
             await next(context);
         }
-        catch (Exception ex)
+        catch (ResourceNotFoundException resourceNotFoundException)
         {
-            await HandleExceptionAsync(context, ex);
+            logger.LogError(resourceNotFoundException, resourceNotFoundException.Message);
+
+            context.Response.ContentType = "text";
+            context.Response.StatusCode = (int)HttpStatusCode.NotFound;
+
+            await context.Response.WriteAsync(resourceNotFoundException.Message);
         }
-    }
-
-    private Task HandleExceptionAsync(HttpContext context, Exception ex)
-    {
-        logger.LogError(ex, ex.Message);
-
-        context.Response.ContentType = "application/json";
-        context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-
-        var result = System.Text.Json.JsonSerializer.Serialize(new
+        catch (Exception exception)
         {
-            error = "An unexpected error occurred.",
-            details = ex.Message 
-        });
+            logger.LogError(exception, exception.Message);
 
-        return context.Response.WriteAsync(result);
+            context.Response.ContentType = "application/json";
+            context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+
+            var result = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                error = "An unexpected error occurred.",
+                details = exception.Message 
+            });
+
+            await context.Response.WriteAsync(result);
+        }
     }
 }

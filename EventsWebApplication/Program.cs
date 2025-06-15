@@ -2,6 +2,7 @@ using EventsWebApplication;
 using EventsWebApplication.Dtos;
 using EventsWebApplication.Entities;
 using EventsWebApplication.Repositories;
+using EventsWebApplication.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 
@@ -59,6 +60,8 @@ builder.Services
 
 builder.Services.AddScoped<EventsRepository>();
 builder.Services.AddScoped<EventRegistrationsRepository>();
+
+builder.Services.AddScoped<EventsService>();
 
 var app = builder.Build();
 
