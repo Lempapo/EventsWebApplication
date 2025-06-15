@@ -2,7 +2,6 @@
 using AutoMapper;
 using EventsWebApplication.Dtos;
 using EventsWebApplication.Entities;
-using EventsWebApplication.Repositories;
 using EventsWebApplication.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -15,27 +14,18 @@ public class EventsController : ControllerBase
 {
     private readonly UpdateEventDtoValidator updateEventDtoValidator;
     private readonly CreateEventDtoValidator createEventDtoValidator;
-    private readonly IMapper mapper;
     private readonly UserManager<ApplicationUser> userManager;
-    private readonly EventsRepository eventsRepository;
-    private readonly EventRegistrationsRepository eventRegistrationsRepository;
     private readonly EventsService eventsService;
 
     public EventsController( 
         CreateEventDtoValidator createEventDtoValidator, 
         UpdateEventDtoValidator updateEventDtoValidator,
-        IMapper mapper,
         UserManager<ApplicationUser> userManager,
-        EventsRepository eventsRepository,
-        EventRegistrationsRepository eventRegistrationsRepository,
         EventsService eventsService)
     {
         this.createEventDtoValidator = createEventDtoValidator;
         this.updateEventDtoValidator = updateEventDtoValidator;
-        this.mapper = mapper;
         this.userManager = userManager;
-        this.eventsRepository = eventsRepository;
-        this.eventRegistrationsRepository = eventRegistrationsRepository;
         this.eventsService = eventsService;
     }
     
@@ -48,24 +38,7 @@ public class EventsController : ControllerBase
         [Required][Range(1, int.MaxValue)] int pageNumber, 
         [Required][Range(1, 50)] int pageSize)
     {
-        var (paginatedEvents, totalEventsCount) = await eventsRepository.GetPaginatedEventsAsync(
-            title,
-            location,
-            category,
-            date,
-            pageNumber,
-            pageSize
-        );
-        
-        var eventDtos = mapper.Map<List<ShortEventDto>>(paginatedEvents);
-        
-        var pageDto = new PageDto<ShortEventDto>
-        {
-            Items = eventDtos.ToList(),
-            TotalItemsCount = totalEventsCount,
-            PageSize = pageSize,
-            PagesCount = (int)Math.Ceiling((double)totalEventsCount / pageSize)
-        };
+        var pageDto = await eventsService.GetEvents(title, location, category, date, pageNumber, pageSize);
         
         return Ok(pageDto);
     }
@@ -97,12 +70,8 @@ public class EventsController : ControllerBase
                 return NotFound();
             }
         }
-
-        var newEvent = mapper.Map<Event>(createEventDto);
         
-        await eventsRepository.InsertEventAsync(newEvent);
-        
-        var newFullEventDto = mapper.Map<FullEventDto>(newEvent);
+        var newFullEventDto = await eventsService.CreateEvent(createEventDto);
         
         return Ok(newFullEventDto);
     }
@@ -117,48 +86,11 @@ public class EventsController : ControllerBase
         {
             return BadRequest(updateEventValidatorResult.Errors);
         }
-
-        var eventToUpdate = await eventsRepository.GetEventByIdOrDefaultAsync(eventId);
         
-        if (eventToUpdate is null)
-        {
-            return NotFound();
-        }
-        
-        if (updateEventDto.ImageFileId is not null && eventToUpdate.ImageFileId != updateEventDto.ImageFileId)
-        {
-            var filePath = Path.Combine(Directory.GetCurrentDirectory(), "uploads", updateEventDto.ImageFileId);
-        
-            if (!System.IO.File.Exists(filePath))
-            {
-                return NotFound();
-            }
-        }
-        
-        // Scenario:
-        // 1. Event with max participants count = 50 created.
-        // 2. 50 users registered for the event.
-        // 3. User changed max participants count from 50 to 20.
-        // 4. Now we have event with max participants count = 20 and current participants count = 50.
-        
-        // Scenario:
-        // 1. Admin #1 creates a new event.
-        // 2. Admin #2 edits this event.
-        // 3. Admin #1 doesn't like it and edits it back.
-        // 4. Admin #2 edits this event again.
-        // We can forbid admins from editing other admin's events.
-        
-        mapper.Map(updateEventDto, eventToUpdate);
-        
-        await eventsRepository.UpdateEventAsync(eventToUpdate);
+        await eventsService.EditEvent(eventId, updateEventDto);
         
         return NoContent();
     }
-    
-    // Event deletion options:
-    // a) Notify registered users.
-    // b) Don't delete event if there are users registered for it.
-    // c) Delete event without notifying users.
 
     [HttpPost("/events/{eventId:guid}/registrations")]
     [Authorize]
@@ -175,16 +107,7 @@ public class EventsController : ControllerBase
     [Authorize(Policy = "AdminPolicy")]
     public async Task<IActionResult> GetEventParticipants(Guid eventId)
     {
-        var @event = await eventsRepository.GetEventByIdOrDefaultAsync(eventId);
-
-        if (@event is null)
-        {
-            return NotFound();
-        }
-        
-        var eventRegistrations = await eventRegistrationsRepository.GetEventRegistrationsAsync(eventId);
-        
-        var eventRegistrationDtos = eventRegistrations.Select(eventRegistration => mapper.Map<ShortEventParticipantDto>(eventRegistration));
+        var eventRegistrationDtos = await eventsService.GetEventParticipants(eventId);
 
         return Ok(eventRegistrationDtos);
     }
@@ -193,23 +116,9 @@ public class EventsController : ControllerBase
     [Authorize]
     public async Task<IActionResult> UnregisterFromEvent(Guid eventId)
     {
-        var @event = await eventsRepository.GetEventByIdOrDefaultAsync(eventId);
-        
-        if (@event is null)
-        {
-            return NotFound();
-        }
-        
         var currentUser = await userManager.GetUserAsync(User);
-       
-        var eventRegistration = await eventRegistrationsRepository.GetEventRegistrationOrDefaultAsync(eventId, currentUser!.Id);
-
-        if (eventRegistration is null)
-        {
-            return BadRequest();
-        }
         
-        await eventRegistrationsRepository.DeleteFromEventRegistrationsAsync(eventRegistration);
+        await eventsService.UnregisterForEvent(eventId, currentUser!.Id);
         
         return Ok();
     }
@@ -219,8 +128,8 @@ public class EventsController : ControllerBase
     public async Task<IActionResult> GetUserEvents()
     {
         var user = await userManager.GetUserAsync(User);
-        
-        var events = await eventRegistrationsRepository.GetUserEventsAsync(user!.Id);
+
+        var events = await eventsService.GetUserEvents(user!.Id);
         
         return Ok(events);
     }
@@ -229,23 +138,7 @@ public class EventsController : ControllerBase
     [Authorize(Policy = "AdminPolicy")]
     public async Task<IActionResult> GetEventParticipant(Guid eventId, string participantId)
     {
-        var @event = await eventsRepository.GetEventByIdOrDefaultAsync(eventId);
-
-        if (@event is null)
-        {
-            return NotFound();
-        }
-
-        var eventRegistration = @event.EventRegistrations
-            .Where(eventRegistration => eventRegistration.UserId == participantId)
-            .SingleOrDefault();
-
-        if (eventRegistration is null)
-        {
-            return NotFound();
-        }
-        
-        var userDto = mapper.Map<FullEventParticipantDto>(eventRegistration);
+        var userDto = await eventsService.GetEventParticipant(eventId, participantId);
         
         return Ok(userDto);
     }
