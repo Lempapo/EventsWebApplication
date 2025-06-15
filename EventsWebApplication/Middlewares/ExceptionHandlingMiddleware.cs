@@ -20,12 +20,21 @@ public class ExceptionHandlingMiddleware
         }
         catch (ResourceNotFoundException resourceNotFoundException)
         {
-            logger.LogError(resourceNotFoundException, resourceNotFoundException.Message);
+            logger.LogWarning(resourceNotFoundException, resourceNotFoundException.Message);
 
             context.Response.ContentType = "text";
             context.Response.StatusCode = (int)HttpStatusCode.NotFound;
 
             await context.Response.WriteAsync(resourceNotFoundException.Message);
+        }
+        catch (BusinessRuleViolationException businessRuleViolationException)
+        {
+            logger.LogWarning(businessRuleViolationException, businessRuleViolationException.Message);
+
+            context.Response.ContentType = "text";
+            context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+
+            await context.Response.WriteAsync(businessRuleViolationException.Message);
         }
         catch (Exception exception)
         {

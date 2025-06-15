@@ -164,37 +164,9 @@ public class EventsController : ControllerBase
     [Authorize]
     public async Task<IActionResult> RegisterForEvent(Guid eventId)
     {
-        var @event = await eventsRepository.GetEventByIdOrDefaultAsync(eventId);
-    
-        if (@event is null)
-        {
-            return NotFound();
-        }
-
         var currentUser = await userManager.GetUserAsync(User);
-        var isUserRegistered = await eventRegistrationsRepository.IsUserRegisteredForEventAsync(eventId, currentUser!.Id);
 
-        if (isUserRegistered)
-        {
-            return BadRequest();
-        }
-       
-        var eventRegistrationsCount = await eventRegistrationsRepository.GetEventRegistrationsCountAsync(eventId);
-
-        if (eventRegistrationsCount >= @event.MaxParticipantsCount)
-        {
-            return BadRequest();
-        }
-    
-        var eventRegistration = new EventRegistration
-        {
-            Id = Guid.NewGuid(),
-            EventId = eventId,
-            UserId = currentUser!.Id,
-            RegistrationDate = DateOnly.FromDateTime(DateTime.Today)
-        };
-
-        await eventRegistrationsRepository.InsertEventRegistrationAsync(eventRegistration);
+        await eventsService.RegisterForEvent(eventId, currentUser!.Id);
         
         return NoContent();
     }
