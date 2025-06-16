@@ -70,4 +70,47 @@ public class EventsTests
         Assert.Equal(0, fullEventDto.CurrentParticipantsCount);
         Assert.Equal(@event.ImageFileId, fullEventDto.ImageFileId);
     }
+
+    [Fact]
+    public async Task CreateEvent_ShouldSucceed()
+    {
+        var createEventDto = new CreateEventDto()
+        {
+            Title = "Test Event Title",
+            Description = "Test Event Description",
+            StartAt = DateTime.Now,
+            EndAt = DateTime.Now.AddDays(1),
+            Location = "Test Location",
+            Category = null,
+            MaxParticipantsCount = 5,
+            ImageFileId = null
+        };
+        
+        var createdEventDto = await eventsService.CreateEvent(createEventDto);
+        
+        var persistedEvent = await dbContext.Events
+            .Include(@event => @event.EventRegistrations)
+            .SingleAsync(@event => @event.Id == createdEventDto.Id);
+        
+        Assert.Equal(createEventDto.Title, createdEventDto.Title);
+        Assert.Equal(createEventDto.Description, createdEventDto.Description);
+        Assert.Equal(createEventDto.StartAt, createdEventDto.StartAt);
+        Assert.Equal(createEventDto.EndAt, createdEventDto.EndAt);
+        Assert.Equal(createEventDto.Location, createdEventDto.Location);
+        Assert.Equal(createEventDto.Category, createdEventDto.Category);
+        Assert.Equal(createEventDto.MaxParticipantsCount, createdEventDto.MaxParticipantsCount);
+        Assert.Equal(0, createdEventDto.CurrentParticipantsCount);
+        Assert.Equal(createEventDto.ImageFileId, createdEventDto.ImageFileId);
+        
+        Assert.Equal(createdEventDto.Id, persistedEvent.Id);
+        Assert.Equal(createdEventDto.Title, persistedEvent.Title);
+        Assert.Equal(createdEventDto.Description, persistedEvent.Description);
+        Assert.Equal(createdEventDto.StartAt, persistedEvent.StartAt);
+        Assert.Equal(createdEventDto.EndAt, persistedEvent.EndAt);
+        Assert.Equal(createdEventDto.Location, persistedEvent.Location);
+        Assert.Equal(createdEventDto.Category, persistedEvent.Category);
+        Assert.Equal(createdEventDto.MaxParticipantsCount, persistedEvent.MaxParticipantsCount);
+        Assert.Empty(persistedEvent.EventRegistrations);
+        Assert.Equal(createdEventDto.ImageFileId, persistedEvent.ImageFileId);
+    }
 }
