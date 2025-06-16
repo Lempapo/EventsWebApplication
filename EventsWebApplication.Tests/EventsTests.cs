@@ -72,7 +72,7 @@ public class EventsTests
     }
 
     [Fact]
-    public async Task CreateEvent_ShouldSucceed()
+    public async Task CreateEvent_ShouldCreateEventSuccessfully()
     {
         var createEventDto = new CreateEventDto()
         {
@@ -112,5 +112,73 @@ public class EventsTests
         Assert.Equal(createdEventDto.MaxParticipantsCount, persistedEvent.MaxParticipantsCount);
         Assert.Empty(persistedEvent.EventRegistrations);
         Assert.Equal(createdEventDto.ImageFileId, persistedEvent.ImageFileId);
+    }
+
+    [Fact]
+    public async Task EditEvent_WhenEventExists_ShouldUpdateEventSuccessfully()
+    {
+        var @event = new Event()
+        {
+            Id = Guid.NewGuid(),
+            Title = "Event Title",
+            Description = "Event Description",
+            StartAt = DateTime.Now,
+            EndAt = DateTime.Now.AddDays(1),
+            Location = "Location",
+            Category = null,
+            MaxParticipantsCount = 5,
+            ImageFileId = null
+        };
+        
+        dbContext.Events.Add(@event);
+        await dbContext.SaveChangesAsync();
+
+        var updateEventDto = new UpdateEventDto()
+        {
+            Title = "New Event Title",
+            Description = "New Event Description",
+            StartAt = DateTime.Now.AddDays(1),
+            EndAt = DateTime.Now.AddDays(2),
+            Location = "New Location",
+            Category = "New Category",
+            MaxParticipantsCount = 6,
+            ImageFileId = null
+        };
+        
+        await eventsService.EditEvent(@event.Id, updateEventDto);
+        
+        var updatedEvent = await dbContext.Events.SingleOrDefaultAsync(updatedEvent => updatedEvent.Id == @event.Id);
+        
+        Assert.NotNull(updatedEvent);
+        
+        Assert.Equal(updateEventDto.Title, updatedEvent.Title);
+        Assert.Equal(updateEventDto.Description, updatedEvent.Description);
+        Assert.Equal(updateEventDto.StartAt, updatedEvent.StartAt);
+        Assert.Equal(updateEventDto.EndAt, updatedEvent.EndAt);
+        Assert.Equal(updateEventDto.Location, updatedEvent.Location);
+        Assert.Equal(updateEventDto.Category, updatedEvent.Category);
+        Assert.Equal(updateEventDto.MaxParticipantsCount, updatedEvent.MaxParticipantsCount);
+        Assert.Equal(updateEventDto.ImageFileId, updatedEvent.ImageFileId);
+    }
+    
+    [Fact]
+    public async Task EditEvent_WhenEventDoesNotExist_ShouldThrowNotFoundException()
+    {
+        var updateEventDto = new UpdateEventDto()
+        {
+            Title = "New Event Title",
+            Description = "New Event Description",
+            StartAt = DateTime.Now.AddDays(1),
+            EndAt = DateTime.Now.AddDays(2),
+            Location = "New Location",
+            Category = "New Category",
+            MaxParticipantsCount = 6,
+            ImageFileId = null
+        };
+
+        var notExistingEventId = Guid.NewGuid();
+        
+        var act = async () => await eventsService.EditEvent(notExistingEventId, updateEventDto);
+        await Assert.ThrowsAsync<ResourceNotFoundException>(act);
     }
 }
