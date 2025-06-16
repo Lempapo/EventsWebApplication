@@ -16,7 +16,7 @@ public class EventsTests
     public EventsTests()
     {
         var dbContextOptions = new DbContextOptionsBuilder<EventsDbContext>()
-            .UseInMemoryDatabase(databaseName: "TestDatabase")
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
         
         dbContext = new EventsDbContext(dbContextOptions);
