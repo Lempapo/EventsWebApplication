@@ -22,9 +22,9 @@ public class EventsRepository
         int pageSize)
     {
         var filteredEventsQuery = dbContext.Events
-            .Where(@event => string.IsNullOrEmpty(title) || EF.Functions.ILike(@event.Title, $"%{title}%"))
-            .Where(@event => string.IsNullOrEmpty(location) || EF.Functions.ILike(@event.Location, $"%{location}%"))
-            .Where(@event => string.IsNullOrEmpty(category) || @event.Category != null && EF.Functions.ILike(@event.Category, $"%{category}%"))
+            .Where(@event => string.IsNullOrEmpty(title) || EF.Functions.Like(@event.Title.ToLower(), $"%{title.ToLower()}%"))
+            .Where(@event => string.IsNullOrEmpty(location) || EF.Functions.Like(@event.Location.ToLower(), $"%{location.ToLower()}%"))
+            .Where(@event => string.IsNullOrEmpty(category) || @event.Category != null && EF.Functions.Like(@event.Category.ToLower(), $"%{category.ToLower()}%"))
             .Where(@event => date == null || DateOnly.FromDateTime(@event.StartAt) <= date && DateOnly.FromDateTime(@event.EndAt) >= date);
 
         var totalEventsCount = await filteredEventsQuery.CountAsync();

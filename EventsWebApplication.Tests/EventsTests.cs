@@ -181,4 +181,573 @@ public class EventsTests
         var act = async () => await eventsService.EditEvent(notExistingEventId, updateEventDto);
         await Assert.ThrowsAsync<ResourceNotFoundException>(act);
     }
+
+    [Fact]
+    public async Task GetEvents_WhenNoEventsExist_ShouldReturnEmpty()
+    {
+        var eventsPage = await eventsService.GetEvents(
+            title: null,
+            location: null,
+            category: null,
+            date: null,
+            pageNumber: 1,
+            pageSize: 1
+        );
+        
+        Assert.Equal([], eventsPage.Items);
+        Assert.Equal(0, eventsPage.TotalItemsCount);
+        Assert.Equal(1, eventsPage.PageSize);
+        Assert.Equal(0, eventsPage.PagesCount);
+    }
+
+    [Fact]
+    public async Task GetEvents_WhenManyEventsExist_ShouldReturnPaginatedEvents()
+    {
+        var events = new List<Event>()
+        { 
+            new Event()
+            {
+                Id = Guid.NewGuid(),
+                Title = "Event Title 1",
+                Description = "Event Description 1",
+                StartAt = DateTime.Now,
+                EndAt = DateTime.Now.AddDays(1),
+                Location = "Location 1",
+                Category = "Category 1",
+                MaxParticipantsCount = 1,
+                ImageFileId = null
+            },
+            new Event()
+            {
+                Id = Guid.NewGuid(),
+                Title = "Event Title 2",
+                Description = "Event Description 2",
+                StartAt = DateTime.Now.AddDays(1),
+                EndAt = DateTime.Now.AddDays(2),
+                Location = "Location 2",
+                Category = "Category 2",
+                MaxParticipantsCount = 2,
+                ImageFileId = null
+            },
+            new Event()
+            {
+                Id = Guid.NewGuid(),
+                Title = "Event Title 3",
+                Description = "Event Description 3",
+                StartAt = DateTime.Now.AddDays(2),
+                EndAt = DateTime.Now.AddDays(3),
+                Location = "Location 3",
+                Category = "Category 3",
+                MaxParticipantsCount = 3,
+                ImageFileId = null
+            },
+            new Event()
+            {
+                Id = Guid.NewGuid(),
+                Title = "Event Title 4",
+                Description = "Event Description 4",
+                StartAt = DateTime.Now.AddDays(3),
+                EndAt = DateTime.Now.AddDays(4),
+                Location = "Location 4",
+                Category = "Category 4",
+                MaxParticipantsCount = 4,
+                ImageFileId = null
+            },
+            new Event()
+            {
+                Id = Guid.NewGuid(),
+                Title = "Event Title 5",
+                Description = "Event Description 5",
+                StartAt = DateTime.Now.AddDays(4),
+                EndAt = DateTime.Now.AddDays(5),
+                Location = "Location 5",
+                Category = "Category 5",
+                MaxParticipantsCount = 5,
+                ImageFileId = null
+            }
+        };
+        
+        dbContext.Events.AddRange(events);
+        await dbContext.SaveChangesAsync();
+
+        var paginatedEvents = await eventsService.GetEvents(
+            title: null,
+            location: null,
+            category: null,
+            date: null,
+            pageNumber: 2,
+            pageSize: 2
+        );
+
+        var thirdEvent = events[2];
+        var thirdEventDto = new ShortEventDto()
+        {
+            Id = thirdEvent.Id,
+            Title = thirdEvent.Title,
+            StartAt = thirdEvent.StartAt,
+            EndAt = thirdEvent.EndAt,
+            Location = thirdEvent.Location,
+            Category = thirdEvent.Category,
+            MaxParticipantsCount = thirdEvent.MaxParticipantsCount,
+            CurrentParticipantsCount = 0,
+            ImageFileId = thirdEvent.ImageFileId
+        };
+        
+        var fourthEvent = events[3];
+        var fourthEventDto = new ShortEventDto
+        {
+            Id = fourthEvent.Id,
+            Title = fourthEvent.Title,
+            StartAt = fourthEvent.StartAt,
+            EndAt = fourthEvent.EndAt,
+            Location = fourthEvent.Location,
+            Category = fourthEvent.Category,
+            MaxParticipantsCount = fourthEvent.MaxParticipantsCount,
+            CurrentParticipantsCount = 0,
+            ImageFileId = fourthEvent.ImageFileId
+        };
+
+        var expectedPaginatedEventDtos = new List<ShortEventDto>
+        {
+            thirdEventDto,
+            fourthEventDto
+        };
+        
+        Assert.Equal(expectedPaginatedEventDtos.Count, paginatedEvents.Items.Count);
+        Assert.Equivalent(expectedPaginatedEventDtos, paginatedEvents.Items);
+        Assert.Equal(5, paginatedEvents.TotalItemsCount);
+        Assert.Equal(2, paginatedEvents.PageSize);
+        Assert.Equal(3, paginatedEvents.PagesCount);
+    }
+
+    [Fact]
+    public async Task GetEvents_WhenTitleFilterSpecified_ShouldReturnFilteredByTitle()
+    {
+         var events = new List<Event>()
+        {
+            new Event()
+            {
+                Id = Guid.NewGuid(),
+                Title = "Event Title 1",
+                Description = "Event Description 1",
+                StartAt = DateTime.Now,
+                EndAt = DateTime.Now.AddDays(1),
+                Location = "Location 1",
+                Category = "Category 1",
+                MaxParticipantsCount = 1,
+                ImageFileId = null
+            },
+            new Event()
+            {
+                Id = Guid.NewGuid(),
+                Title = "Event Title 2",
+                Description = "Event Description 2",
+                StartAt = DateTime.Now.AddDays(1),
+                EndAt = DateTime.Now.AddDays(2),
+                Location = "Location 2",
+                Category = "Category 2",
+                MaxParticipantsCount = 2,
+                ImageFileId = null
+            },
+            new Event()
+            {
+                Id = Guid.NewGuid(),
+                Title = "Event Title 3",
+                Description = "Event Description 3",
+                StartAt = DateTime.Now.AddDays(2),
+                EndAt = DateTime.Now.AddDays(3),
+                Location = "Location 3",
+                Category = "Category 3",
+                MaxParticipantsCount = 3,
+                ImageFileId = null
+            },
+            new Event()
+            {
+                Id = Guid.NewGuid(),
+                Title = "Event Title 4",
+                Description = "Event Description 4",
+                StartAt = DateTime.Now.AddDays(3),
+                EndAt = DateTime.Now.AddDays(4),
+                Location = "Location 4",
+                Category = "Category 4",
+                MaxParticipantsCount = 4,
+                ImageFileId = null
+            },
+            new Event()
+            {
+                Id = Guid.NewGuid(),
+                Title = "Event Title 5",
+                Description = "Event Description 5",
+                StartAt = DateTime.Now.AddDays(4),
+                EndAt = DateTime.Now.AddDays(5),
+                Location = "Location 5",
+                Category = "Category 5",
+                MaxParticipantsCount = 5,
+                ImageFileId = null
+            }
+        };
+         
+         dbContext.Events.AddRange(events);
+         await dbContext.SaveChangesAsync();
+
+         var paginatedEvents = await eventsService.GetEvents(
+             title: "3",
+             location: null,
+             category: null,
+             date: null,
+             pageNumber: 1,
+             pageSize: 2
+         );
+         
+         var thirdEvent = events[2];
+
+         var thirdEventDto = new ShortEventDto()
+         {
+             Id = thirdEvent.Id,
+             Title = thirdEvent.Title,
+             StartAt = thirdEvent.StartAt,
+             EndAt = thirdEvent.EndAt,
+             Location = thirdEvent.Location,
+             Category = thirdEvent.Category,
+             MaxParticipantsCount = thirdEvent.MaxParticipantsCount,
+             CurrentParticipantsCount = 0,
+             ImageFileId = thirdEvent.ImageFileId
+         };
+
+         var expectedFilteredEventDtos = new List<ShortEventDto> { thirdEventDto };
+         
+         Assert.Equal(expectedFilteredEventDtos.Count, paginatedEvents.Items.Count);
+         Assert.Equivalent(expectedFilteredEventDtos, paginatedEvents.Items);
+         Assert.Equal(1, paginatedEvents.TotalItemsCount);
+         Assert.Equal(2, paginatedEvents.PageSize);
+         Assert.Equal(1, paginatedEvents.PagesCount);
+    }
+    
+    [Fact]
+    public async Task GetEvents_WhenLocationFilterSpecified_ShouldReturnFilteredByLocation()
+    {
+         var events = new List<Event>()
+        {
+            new Event()
+            {
+                Id = Guid.NewGuid(),
+                Title = "Event Title 1",
+                Description = "Event Description 1",
+                StartAt = DateTime.Now,
+                EndAt = DateTime.Now.AddDays(1),
+                Location = "Location 1",
+                Category = "Category 1",
+                MaxParticipantsCount = 1,
+                ImageFileId = null
+            },
+            new Event()
+            {
+                Id = Guid.NewGuid(),
+                Title = "Event Title 2",
+                Description = "Event Description 2",
+                StartAt = DateTime.Now.AddDays(1),
+                EndAt = DateTime.Now.AddDays(2),
+                Location = "Location 2",
+                Category = "Category 2",
+                MaxParticipantsCount = 2,
+                ImageFileId = null
+            },
+            new Event()
+            {
+                Id = Guid.NewGuid(),
+                Title = "Event Title 3",
+                Description = "Event Description 3",
+                StartAt = DateTime.Now.AddDays(2),
+                EndAt = DateTime.Now.AddDays(3),
+                Location = "Location 3",
+                Category = "Category 3",
+                MaxParticipantsCount = 3,
+                ImageFileId = null
+            },
+            new Event()
+            {
+                Id = Guid.NewGuid(),
+                Title = "Event Title 4",
+                Description = "Event Description 4",
+                StartAt = DateTime.Now.AddDays(3),
+                EndAt = DateTime.Now.AddDays(4),
+                Location = "Location 4",
+                Category = "Category 4",
+                MaxParticipantsCount = 4,
+                ImageFileId = null
+            },
+            new Event()
+            {
+                Id = Guid.NewGuid(),
+                Title = "Event Title 5",
+                Description = "Event Description 5",
+                StartAt = DateTime.Now.AddDays(4),
+                EndAt = DateTime.Now.AddDays(5),
+                Location = "Location 5",
+                Category = "Category 5",
+                MaxParticipantsCount = 5,
+                ImageFileId = null
+            }
+        };
+         
+         dbContext.Events.AddRange(events);
+         await dbContext.SaveChangesAsync();
+
+         var paginatedEvents = await eventsService.GetEvents(
+             title: null,
+             location: "3",
+             category: null,
+             date: null,
+             pageNumber: 1,
+             pageSize: 2
+         );
+         
+         var thirdEvent = events[2];
+
+         var thirdEventDto = new ShortEventDto()
+         {
+             Id = thirdEvent.Id,
+             Title = thirdEvent.Title,
+             StartAt = thirdEvent.StartAt,
+             EndAt = thirdEvent.EndAt,
+             Location = thirdEvent.Location,
+             Category = thirdEvent.Category,
+             MaxParticipantsCount = thirdEvent.MaxParticipantsCount,
+             CurrentParticipantsCount = 0,
+             ImageFileId = thirdEvent.ImageFileId
+         };
+
+         var expectedFilteredEventDtos = new List<ShortEventDto> { thirdEventDto };
+         
+         Assert.Equal(expectedFilteredEventDtos.Count, paginatedEvents.Items.Count);
+         Assert.Equivalent(expectedFilteredEventDtos, paginatedEvents.Items);
+         Assert.Equal(1, paginatedEvents.TotalItemsCount);
+         Assert.Equal(2, paginatedEvents.PageSize);
+         Assert.Equal(1, paginatedEvents.PagesCount);
+    }
+    
+    [Fact]
+    public async Task GetEvents_WhenCategoryFilterSpecified_ShouldReturnFilteredByCategory()
+    {
+         var events = new List<Event>()
+        {
+            new Event()
+            {
+                Id = Guid.NewGuid(),
+                Title = "Event Title 1",
+                Description = "Event Description 1",
+                StartAt = DateTime.Now,
+                EndAt = DateTime.Now.AddDays(1),
+                Location = "Location 1",
+                Category = "Category 1",
+                MaxParticipantsCount = 1,
+                ImageFileId = null
+            },
+            new Event()
+            {
+                Id = Guid.NewGuid(),
+                Title = "Event Title 2",
+                Description = "Event Description 2",
+                StartAt = DateTime.Now.AddDays(1),
+                EndAt = DateTime.Now.AddDays(2),
+                Location = "Location 2",
+                Category = "Category 2",
+                MaxParticipantsCount = 2,
+                ImageFileId = null
+            },
+            new Event()
+            {
+                Id = Guid.NewGuid(),
+                Title = "Event Title 3",
+                Description = "Event Description 3",
+                StartAt = DateTime.Now.AddDays(2),
+                EndAt = DateTime.Now.AddDays(3),
+                Location = "Location 3",
+                Category = "Category 3",
+                MaxParticipantsCount = 3,
+                ImageFileId = null
+            },
+            new Event()
+            {
+                Id = Guid.NewGuid(),
+                Title = "Event Title 4",
+                Description = "Event Description 4",
+                StartAt = DateTime.Now.AddDays(3),
+                EndAt = DateTime.Now.AddDays(4),
+                Location = "Location 4",
+                Category = "Category 4",
+                MaxParticipantsCount = 4,
+                ImageFileId = null
+            },
+            new Event()
+            {
+                Id = Guid.NewGuid(),
+                Title = "Event Title 5",
+                Description = "Event Description 5",
+                StartAt = DateTime.Now.AddDays(4),
+                EndAt = DateTime.Now.AddDays(5),
+                Location = "Location 5",
+                Category = "Category 5",
+                MaxParticipantsCount = 5,
+                ImageFileId = null
+            }
+        };
+         
+         dbContext.Events.AddRange(events);
+         await dbContext.SaveChangesAsync();
+
+         var paginatedEvents = await eventsService.GetEvents(
+             title: null,
+             location: null,
+             category: "3",
+             date: null,
+             pageNumber: 1,
+             pageSize: 2
+         );
+         
+         var thirdEvent = events[2];
+
+         var thirdEventDto = new ShortEventDto()
+         {
+             Id = thirdEvent.Id,
+             Title = thirdEvent.Title,
+             StartAt = thirdEvent.StartAt,
+             EndAt = thirdEvent.EndAt,
+             Location = thirdEvent.Location,
+             Category = thirdEvent.Category,
+             MaxParticipantsCount = thirdEvent.MaxParticipantsCount,
+             CurrentParticipantsCount = 0,
+             ImageFileId = thirdEvent.ImageFileId
+         };
+
+         var expectedFilteredEventDtos = new List<ShortEventDto> { thirdEventDto };
+         
+         Assert.Equal(expectedFilteredEventDtos.Count, paginatedEvents.Items.Count);
+         Assert.Equivalent(expectedFilteredEventDtos, paginatedEvents.Items);
+         Assert.Equal(1, paginatedEvents.TotalItemsCount);
+         Assert.Equal(2, paginatedEvents.PageSize);
+         Assert.Equal(1, paginatedEvents.PagesCount);
+    }
+    
+    [Fact]
+    public async Task GetEvents_WhenDateFilterSpecified_ShouldReturnFilteredByDate()
+    {
+         var events = new List<Event>()
+        {
+            new Event()
+            {
+                Id = Guid.NewGuid(),
+                Title = "Event Title 1",
+                Description = "Event Description 1",
+                StartAt = DateTime.Now,
+                EndAt = DateTime.Now.AddDays(1),
+                Location = "Location 1",
+                Category = "Category 1",
+                MaxParticipantsCount = 1,
+                ImageFileId = null
+            },
+            new Event()
+            {
+                Id = Guid.NewGuid(),
+                Title = "Event Title 2",
+                Description = "Event Description 2",
+                StartAt = DateTime.Now.AddDays(1),
+                EndAt = DateTime.Now.AddDays(2),
+                Location = "Location 2",
+                Category = "Category 2",
+                MaxParticipantsCount = 2,
+                ImageFileId = null
+            },
+            new Event()
+            {
+                Id = Guid.NewGuid(),
+                Title = "Event Title 3",
+                Description = "Event Description 3",
+                StartAt = DateTime.Now.AddDays(2),
+                EndAt = DateTime.Now.AddDays(3),
+                Location = "Location 3",
+                Category = "Category 3",
+                MaxParticipantsCount = 3,
+                ImageFileId = null
+            },
+            new Event()
+            {
+                Id = Guid.NewGuid(),
+                Title = "Event Title 4",
+                Description = "Event Description 4",
+                StartAt = DateTime.Now.AddDays(3),
+                EndAt = DateTime.Now.AddDays(4),
+                Location = "Location 4",
+                Category = "Category 4",
+                MaxParticipantsCount = 4,
+                ImageFileId = null
+            },
+            new Event()
+            {
+                Id = Guid.NewGuid(),
+                Title = "Event Title 5",
+                Description = "Event Description 5",
+                StartAt = DateTime.Now.AddDays(4),
+                EndAt = DateTime.Now.AddDays(5),
+                Location = "Location 5",
+                Category = "Category 5",
+                MaxParticipantsCount = 5,
+                ImageFileId = null
+            }
+        };
+         
+         dbContext.Events.AddRange(events);
+         await dbContext.SaveChangesAsync();
+
+         var paginatedEvents = await eventsService.GetEvents(
+             title: null,
+             location: null,
+             category: null,
+             date: DateOnly.FromDateTime(DateTime.Now.AddDays(2)),
+             pageNumber: 1,
+             pageSize: 2
+         );
+         
+         var secondEvent = events[1];
+
+         var secondEventDto = new ShortEventDto()
+         {
+             Id = secondEvent.Id,
+             Title = secondEvent.Title,
+             StartAt = secondEvent.StartAt,
+             EndAt = secondEvent.EndAt,
+             Location = secondEvent.Location,
+             Category = secondEvent.Category,
+             MaxParticipantsCount = secondEvent.MaxParticipantsCount,
+             CurrentParticipantsCount = 0,
+             ImageFileId = secondEvent.ImageFileId
+         };
+         
+         var thirdEvent = events[2];
+
+         var thirdEventDto = new ShortEventDto()
+         {
+             Id = thirdEvent.Id,
+             Title = thirdEvent.Title,
+             StartAt = thirdEvent.StartAt,
+             EndAt = thirdEvent.EndAt,
+             Location = thirdEvent.Location,
+             Category = thirdEvent.Category,
+             MaxParticipantsCount = thirdEvent.MaxParticipantsCount,
+             CurrentParticipantsCount = 0,
+             ImageFileId = thirdEvent.ImageFileId
+         };
+
+         var expectedFilteredEventDtos = new List<ShortEventDto>
+         {
+             secondEventDto,
+             thirdEventDto
+         };
+         
+         Assert.Equal(expectedFilteredEventDtos.Count, paginatedEvents.Items.Count);
+         Assert.Equivalent(expectedFilteredEventDtos, paginatedEvents.Items);
+         Assert.Equal(2, paginatedEvents.TotalItemsCount);
+         Assert.Equal(2, paginatedEvents.PageSize);
+         Assert.Equal(1, paginatedEvents.PagesCount);
+    }
 }
