@@ -35,3 +35,9 @@ dotnet run --project ./EventsWebApplication
 ```
 
 Navigate to the http://localhost:5229/swagger/index.html.
+
+### How to use
+
+Here is a short clip, showcasing how to use main application features:
+
+[![How to use the app](./assets/how_to_use_video_preview.png)](https://youtu.be/5bYJDRMldto)
